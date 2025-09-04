@@ -29,12 +29,57 @@ async function run() {
 
      const artifactCollection = client.db("artifactsDb").collection("artifacts");
 
-     
-     app.get("/featured", async (req, res) => {
-      const artifacts = await artifactCollection.find({ status: { $ne: "ongoing" } }).sort({ likes: -1 }).limit(6).toArray();
-      res.send(artifacts);
+      app.post("/artifactdata", async (req, res) => {
+      const newArtifact = req.body;
+      console.log(newArtifact);
+      const result = await artifactCollection.insertOne(newArtifact);
+      res.send(result);
     });
-     app.get("/allartifacts", async (req, res) => {
+
+    app.post("/artifacts/:id/like", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    const artifact = await artifactCollection.findOne({ _id: new ObjectId(id) });
+
+    if (artifact.likedBy?.includes(email)) {
+    
+      await artifactCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { 
+          $pull: { likedBy: email },
+          $inc: { likes: -1 }
+        }
+      );
+    } else {
+     
+      await artifactCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { 
+          $addToSet: { likedBy: email }, 
+          $inc: { likes: 1 }
+        }
+      );
+    }
+
+   
+    updatedArtifact = await artifactCollection.findOne({ _id: new ObjectId(id) });
+
+  
+    res.send(updatedArtifact);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Something went wrong" });
+  }
+});
+
+app.get("/featured", async (req, res) => {
+  const artifacts = await artifactCollection.find({ status: { $ne: "ongoing" } }).sort({ likes: -1 }).limit(6).toArray();
+  res.send(artifacts);
+});
+app.get("/allartifacts", async (req, res) => {
       const allArtifacts = await artifactCollection.find().toArray();
       res.send(allArtifacts);
     });
