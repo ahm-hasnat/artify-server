@@ -91,6 +91,17 @@ async function run() {
       res.send(result);
     });
 
+
+    app.put("/allartifacts/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedArtifact = req.body;
+      const result = await artifactCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedArtifact }
+      );
+      res.send(result);
+    });
+
     app.delete("/allartifacts/:id", async (req, res) => {
   const id = req.params.id;
   const result = await artifactCollection.deleteOne({ _id: new ObjectId(id) });
