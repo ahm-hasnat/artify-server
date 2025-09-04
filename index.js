@@ -10,8 +10,6 @@ app.use(cors());
 app.use(express.json());
 
 
-
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.xkximz0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -31,10 +29,18 @@ async function run() {
 
      const artifactCollection = client.db("artifactsDb").collection("artifacts");
 
+     
      app.get("/featured", async (req, res) => {
-      const artifacts = await artifactCollection.find().sort({ likes: 1 }).limit(6).toArray();
+      const artifacts = await artifactCollection.find({ status: { $ne: "ongoing" } }).sort({ likes: -1 }).limit(6).toArray();
       res.send(artifacts);
     });
+     app.get("/allartifacts", async (req, res) => {
+      const allArtifacts = await artifactCollection.find().toArray();
+      res.send(allArtifacts);
+    });
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
