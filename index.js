@@ -118,7 +118,7 @@ async function run() {
         : {};
 
       const allArtifacts = await artifactCollection
-        .find(query, { projection: { likedBy: 1, email: 0 } })
+        .find(query)
         .toArray();
 
       res.send(allArtifacts);
@@ -146,9 +146,7 @@ async function run() {
     app.get("/allartifacts/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await artifactCollection.findOne(query, {
-        projection: { likedBy: 1, email: 0 },
-      });
+      const result = await artifactCollection.findOne(query);
       res.send(result);
     });
 
