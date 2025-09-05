@@ -4,6 +4,11 @@ const app = express();
 const port = process.env.PORT || 3000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
+var admin = require("firebase-admin");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8');
+var serviceAccount = JSON.parse(decoded);
+
 
 app.use(cors());
 app.use(express.json());
@@ -18,6 +23,34 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
+const verifyToken = async(req, res, next) => {
+
+    const authHeader = req.headers.authorization;
+    console.log(authHeader);
+
+    if(!authHeader){
+        return res.status(401).send({ message: "Unauthorized access" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.decoded = decoded;
+    next();
+}
+
+const verifyTokenEmail = async(req, res, next) => {
+    if(req.decoded.email !== req.query.email){
+        return res.status(403).send({ message: "Forbidden" });
+    }
+    next();
+}
 
 async function run() {
   try {
@@ -80,14 +113,28 @@ async function run() {
       res.send(artifacts);
     });
     app.get("/allartifacts", async (req, res) => {
-      const allArtifacts = await artifactCollection.find().toArray();
+    const allArtifacts = await artifactCollection.find({}, { projection: { likedBy: 0, email: 0 } }).toArray();
       res.send(allArtifacts);
     });
+    
+    app.get("/myartifacts",verifyToken,verifyTokenEmail, async (req, res) => {
+  const email = req.query.email;
+  const query = { email: email };
+  const myArtifacts = await artifactCollection.find(query).toArray();
+  res.send(myArtifacts);
+});
+
+app.get("/likedartifacts", verifyToken,verifyTokenEmail, async (req, res) => {
+  const email = req.query.email;
+  const query = { likedBy: email };
+  const likedArtifacts = await artifactCollection.find(query).toArray();
+  res.send(likedArtifacts);
+});
 
     app.get("/allartifacts/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
-      const result = await artifactCollection.findOne(query);
+      const result = await artifactCollection.findOne(query,{ projection: { likedBy: 0, email: 0 } });
       res.send(result);
     });
 
