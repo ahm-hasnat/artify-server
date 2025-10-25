@@ -66,7 +66,7 @@ async function run() {
       const result = await usersCollection.insertOne(newUser);
       res.send(result);
     });
-    
+
     app.post("/artifactdata", async (req, res) => {
       const newArtifact = req.body;
       console.log(newArtifact);
@@ -137,9 +137,14 @@ app.post("/reviews", async (req, res) => {
   }
 });
 
-app.get("/users", async (req, res) => {
+app.get("/users",verifyToken, async (req, res) => {
   const users = await usersCollection.find().toArray();
   res.send(users);
+});
+
+app.get("/reviews", async (req, res) => {
+  const reviews = await reviewCollection.find().toArray();
+  res.send(reviews);
 });
 
 // 🔹 Get all reviews for a specific artifact
