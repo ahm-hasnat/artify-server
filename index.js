@@ -56,6 +56,8 @@ async function run() {
     await client.connect();
 
     const artifactCollection = client.db("artifactsDb").collection("artifacts");
+    const reviewCollection = client.db("artifactsDb").collection("reviews");
+
 
     app.post("/artifactdata", async (req, res) => {
       const newArtifact = req.body;
@@ -101,6 +103,67 @@ async function run() {
         res.status(500).send({ error: "Something went wrong" });
       }
     });
+
+    // 🔹 Add a new review
+app.post("/reviews", async (req, res) => {
+  try {
+    const { artifactId, userEmail, rating, reviewText } = req.body;
+
+    if (!artifactId || !userEmail || !rating) {
+      return res.status(400).send({ error: "Missing required fields" });
+    }
+
+    const newReview = {
+      artifactId: new ObjectId(artifactId),
+      userEmail,
+      rating: parseFloat(rating),
+      reviewText,
+      createdAt: new Date(),
+    };
+
+    const result = await reviewCollection.insertOne(newReview);
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to add review" });
+  }
+});
+
+// 🔹 Get all reviews for a specific artifact
+app.get("/reviews/:artifactId", async (req, res) => {
+  try {
+    const artifactId = req.params.artifactId;
+    const reviews = await reviewCollection
+      .find({ artifactId: new ObjectId(artifactId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.send(reviews);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to fetch reviews" });
+  }
+});
+
+// 🔹 Get average rating for an artifact
+app.get("/reviews/:artifactId/average", async (req, res) => {
+  try {
+    const artifactId = req.params.artifactId;
+
+    const avg = await reviewCollection
+      .aggregate([
+        { $match: { artifactId: new ObjectId(artifactId) } },
+        { $group: { _id: null, avgRating: { $avg: "$rating" } } },
+      ])
+      .toArray();
+
+    res.send({ average: avg[0]?.avgRating || 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Failed to fetch average rating" });
+  }
+});
+
 
     app.get("/featured", async (req, res) => {
       const artifacts = await artifactCollection
