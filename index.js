@@ -58,7 +58,15 @@ async function run() {
     const artifactCollection = client.db("artifactsDb").collection("artifacts");
     const reviewCollection = client.db("artifactsDb").collection("reviews");
 
+    const usersCollection = client.db("artifactsDb").collection("users");
 
+    app.post("/users", async (req, res) => {
+      const newUser = req.body;
+      console.log(newUser);
+      const result = await usersCollection.insertOne(newUser);
+      res.send(result);
+    });
+    
     app.post("/artifactdata", async (req, res) => {
       const newArtifact = req.body;
       console.log(newArtifact);
@@ -107,15 +115,15 @@ async function run() {
     // 🔹 Add a new review
 app.post("/reviews", async (req, res) => {
   try {
-    const { artifactId, userEmail, rating, reviewText } = req.body;
+    const { artifactId, userName, rating, reviewText } = req.body;
 
-    if (!artifactId || !userEmail || !rating) {
+    if (!artifactId || !userName || !rating) {
       return res.status(400).send({ error: "Missing required fields" });
     }
 
     const newReview = {
       artifactId: new ObjectId(artifactId),
-      userEmail,
+      userName,
       rating: parseFloat(rating),
       reviewText,
       createdAt: new Date(),
@@ -129,7 +137,13 @@ app.post("/reviews", async (req, res) => {
   }
 });
 
+app.get("/users", async (req, res) => {
+  const users = await usersCollection.find().toArray();
+  res.send(users);
+});
+
 // 🔹 Get all reviews for a specific artifact
+
 app.get("/reviews/:artifactId", async (req, res) => {
   try {
     const artifactId = req.params.artifactId;
@@ -220,6 +234,12 @@ app.get("/reviews/:artifactId/average", async (req, res) => {
         { _id: new ObjectId(id) },
         { $set: updatedArtifact }
       );
+      res.send(result);
+    });
+
+    app.delete("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await usersCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
